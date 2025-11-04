@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TaskManager — Minhas Tarefas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body class="bg-gradient">
+  <!-- Background Animation -->
+  <div class="bg-animation">
+    <div class="floating-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+      <div class="shape shape-4"></div>
+    </div>
+  </div>
+<nav class="navbar navbar-expand-lg navbar-dark app-navbar">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="#">
+      <i class="fas fa-tasks me-2"></i>TaskManager
+    </a>
+    <div class="ms-auto d-flex align-items-center">
+      <div class="user-info me-3">
+        <i class="fas fa-user-circle me-2"></i>
+        <span id="username"></span>
+      </div>
+      <button class="btn btn-outline-light btn-sm me-2" id="creditsBtn">
+        <i class="fas fa-info-circle me-1"></i>Créditos
+      </button>
+      <button class="btn btn-outline-danger btn-sm" id="logoutBtn">
+        <i class="fas fa-sign-out-alt me-1"></i>Logout
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4" id="app" v-cloak>
+  <!-- Loading state -->
+  <div v-if="loading" class="text-center py-5">
+    <div class="loading-container">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Carregando...</span>
+      </div>
+      <p class="mt-3 text-dark fw-medium">Carregando suas tarefas...</p>
+    </div>
+  </div>
+
+  <div v-else>
+    <!-- Header Section -->
+    <div class="app-header mb-4">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1 class="app-title mb-2">
+            <i class="fas fa-tasks me-3"></i>Minhas Tarefas
+          </h1>
+          <p class="text-muted mb-0">Gerencie suas tarefas de forma eficiente</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <button class="btn btn-primary btn-lg new-task-btn" @click="openNew">
+            <i class="fas fa-plus me-2"></i>Nova Tarefa
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overdue Alert -->
+    <div v-if="overdue.length" class="alert alert-warning alert-modern mb-4">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle me-3 fa-lg"></i>
+        <div>
+          <h6 class="alert-heading mb-1">Atenção! Tarefas em Atraso</h6>
+          <p class="mb-2">Você tem <strong>{{overdue.length}}</strong> tarefa(s) vencidas:</p>
+          <ul class="mb-0 small">
+            <li v-for="t in overdue" class="mb-1">
+              <i class="fas fa-clock me-1"></i>{{t.title}} — vencida em {{formatDate(t.due_date)}}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-if="tasks.length === 0" class="empty-state text-center py-5">
+      <div class="empty-icon mb-3">
+        <i class="fas fa-clipboard-list fa-4x text-muted"></i>
+      </div>
+      <h4 class="text-muted mb-2">Nenhuma tarefa encontrada</h4>
+      <p class="text-muted mb-4">Comece criando sua primeira tarefa!</p>
+      <button class="btn btn-primary btn-lg" @click="openNew">
+        <i class="fas fa-plus me-2"></i>Criar Primeira Tarefa
+      </button>
+    </div>
+
+    <!-- Tasks List -->
+    <div v-else class="tasks-container">
+      <div v-for="t in tasks" :key="t.id" class="task-card">
+        <div class="task-content">
+          <div class="task-header">
+            <h5 class="task-title" :class="{'text-decoration-line-through': t.status === 'done'}">
+              {{t.title}}
+            </h5>
+            <div class="task-actions">
+              <button class="btn btn-sm btn-outline-primary" @click="openEdit(t)" title="Editar">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" @click="remove(t.id)" title="Deletar">
+                <i class="fas fa-trash"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-success" v-if="t.status!=='done'" @click="markDone(t.id)" title="Marcar como concluída">
+                <i class="fas fa-check"></i>
+              </button>
+            </div>
+          </div>
+          <div v-if="t.description" class="task-description">
+            {{t.description}}
+          </div>
+          <div class="task-footer">
+            <div class="task-meta">
+              <span class="badge task-status" :class="statusClass(t)">
+                <i class="fas fa-circle me-1"></i>{{t.status}}
+              </span>
+              <span class="task-date">
+                <i class="fas fa-calendar me-1"></i>Criado em {{formatDate(t.created_at)}}
+              </span>
+              <span v-if="t.due_date" class="task-due">
+                <i class="fas fa-clock me-1"></i>Concluir até {{formatDate(t.due_date)}}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Modal -->
+  <div v-if="modalOpen" class="modal-backdrop">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-tasks me-2"></i>{{isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}}
+          </h5>
+          <button type="button" class="btn-close" @click="closeModal"></button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="save" class="task-form">
+            <div class="form-floating mb-3">
+              <input v-model="form.title" type="text" class="form-control" id="taskTitle" placeholder="Título da tarefa" required>
+              <label for="taskTitle">
+                <i class="fas fa-heading me-2"></i>Título
+              </label>
+            </div>
+            <div class="form-floating mb-3">
+              <textarea v-model="form.description" class="form-control" id="taskDescription" placeholder="Descrição da tarefa" style="height: 100px"></textarea>
+              <label for="taskDescription">
+                <i class="fas fa-align-left me-2"></i>Descrição
+              </label>
+            </div>
+            <div class="form-floating mb-3">
+              <input v-model="form.due_date" type="datetime-local" class="form-control" id="taskDueDate">
+              <label for="taskDueDate">
+                <i class="fas fa-calendar-alt me-2"></i>Data de Conclusão
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" @click="closeModal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" @click="save">
+            <i class="fas fa-save me-1"></i>{{isEditing ? 'Salvar Alterações' : 'Criar Tarefa'}}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- Fecha o v-else -->
+
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const backend = 'http://localhost/TaskManager/backend';
+const { createApp } = Vue;
+
+createApp({
+  data(){ return {
+    tasks: [],
+    token: localStorage.getItem('tm_token'),
+    user: JSON.parse(localStorage.getItem('tm_user') || 'null'),
+    modalOpen: false, form: {}, isEditing:false, overdue:[]
+  }},
+  created(){ 
+    if (!this.token) { window.location.href = 'index.html'; return; }
+    document.getElementById('username').innerText = this.user ? this.user.name : '';
+    this.fetchTasks();
+    document.getElementById('logoutBtn').addEventListener('click', ()=>{
+      this.loading = true;
+      setTimeout(() => {
+        localStorage.removeItem('tm_token'); 
+        localStorage.removeItem('tm_user'); 
+        window.location.href='index.html';
+      }, 200);
+    });
+    document.getElementById('creditsBtn').addEventListener('click', ()=> window.location.href='credits.html');
+  },
+  methods:{
+    authHeaders(){ return { 'Authorization':'Bearer '+this.token, 'Content-Type':'application/json' }; },
+    async fetchTasks(){
+      const res = await fetch(`${backend}/tasks.php`, { headers: this.authHeaders() });
+      if (!res.ok) { localStorage.removeItem('tm_token'); window.location.href='index.html'; return; }
+      this.tasks = await res.json();
+      this.computeOverdue();
+      this.loading = false;
+    },
+    openNew(){ this.isEditing=false; this.form={title:'',description:'',due_date:''}; this.modalOpen=true; },
+    openEdit(t){ this.isEditing=true; this.form = {...t}; this.modalOpen=true; },
+    closeModal(){ this.modalOpen=false; },
+    formatDate(dt){ if(!dt) return '—'; const d=new Date(dt.replace(' ','T')); return d.toLocaleString(); },
+    statusClass(t){ if (t.status==='done') return 'badge bg-success'; 
+                    const due = t.due_date ? new Date(t.due_date.replace(' ','T')) : null;
+                    if (due && due < new Date() && t.status==='open') return 'badge bg-danger';
+                    return 'badge bg-secondary'; },
+    computeOverdue(){
+      const now = new Date();
+      this.overdue = this.tasks.filter(t => t.status==='open' && t.due_date && new Date(t.due_date.replace(' ','T')) < now);
+    },
+    async save(){
+      if (this.isEditing) {
+        const payload = { id: this.form.id, title: this.form.title, description: this.form.description, due_date: this.form.due_date ? this.form.due_date.replace('T',' ') : null };
+        await fetch(`${backend}/tasks.php`, { method:'PUT', headers:this.authHeaders(), body: JSON.stringify(payload) });
+      } else {
+        const payload = { title: this.form.title, description: this.form.description, due_date: this.form.due_date ? this.form.due_date.replace('T',' ') : null };
+        await fetch(`${backend}/tasks.php`, { method:'POST', headers:this.authHeaders(), body: JSON.stringify(payload) });
+      }
+      this.closeModal(); await this.fetchTasks();
+    },
+    async remove(id){
+      if (!confirm('Deletar esta tarefa?')) return;
+      await fetch(`${backend}/tasks.php?id=${id}`, { method:'DELETE', headers:this.authHeaders() });
+      await this.fetchTasks();
+    },
+    async markDone(id){
+      await fetch(`${backend}/tasks.php`, { method:'PUT', headers:this.authHeaders(), body: JSON.stringify({ id, status:'done' }) });
+      await this.fetchTasks();
+    }
+  }
+}).mount('#app');
+</script>
+
+<style>
+/* modal backdrop simples */
+.modal-backdrop { position: fixed; inset:0; background: rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:9999; }
+.modal-dialog { width:95%; max-width:600px; }
+.text-decoration-line-through { text-decoration: line-through; opacity:0.7; }
+</style>
+</body>
+</html>
