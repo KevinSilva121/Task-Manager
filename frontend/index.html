@@ -139,7 +139,17 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
-const backend = 'http://localhost/TaskManager/backend';
+// Detecta automat+icamente o caminho do backend baseado na URL atual
+// Funciona independente do nome da pasta do projeto
+const host = window.location.hostname;
+const protocol = window.location.protocol;
+const port = window.location.port ? ':' + window.location.port : '';
+// Extrai o caminho base: se estiver em /task/frontend/index.html, pega /task
+const pathParts = window.location.pathname.split('/').filter(p => p);
+const frontendIndex = pathParts.indexOf('frontend');
+// Se encontrou 'frontend', pega tudo antes dele como caminho base
+const basePath = frontendIndex > 0 ? '/' + pathParts.slice(0, frontendIndex).join('/') : '';
+const backend = `${protocol}//${host}${port}${basePath}/backend`;
 const { createApp } = Vue;
 
 createApp({
