@@ -21,7 +21,7 @@ foreach ($required as $f) {
 
 $pdo = getPDO();
 
-// Check username
+// Verifica se o nome de usuário já existe
 $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
 $stmt->execute([$data['username']]);
 if ($stmt->fetch()) {

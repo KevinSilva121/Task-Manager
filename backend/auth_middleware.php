@@ -31,5 +31,5 @@ function require_auth() {
         echo json_encode(['error' => 'Invalid or expired token']);
         exit;
     }
-    return $payload; // contains at least user_id and username
+    return $payload; // contém pelo menos user_id e username
 }

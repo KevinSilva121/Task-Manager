@@ -9,7 +9,7 @@
   <link href="assets/style.css" rel="stylesheet">
 </head>
 <body class="bg-gradient">
-  <!-- Background Animation -->
+  <!-- Animação de Fundo -->
   <div class="bg-animation">
     <div class="floating-shapes">
       <div class="shape shape-1"></div>
@@ -33,7 +33,7 @@
             <p class="text-muted">Organize suas tarefas de forma inteligente e eficiente</p>
           </div>
 
-          <!-- Loading state -->
+          <!-- Estado de Carregamento -->
           <div v-if="loading" class="text-center py-4">
             <div class="spinner-border text-primary" role="status">
               <span class="visually-hidden">Carregando...</span>
@@ -139,7 +139,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
-// Detecta automat+icamente o caminho do backend baseado na URL atual
+// Detecta automaticamente o caminho do backend baseado na URL atual
 // Funciona independente do nome da pasta do projeto
 const host = window.location.hostname;
 const protocol = window.location.protocol;
@@ -184,8 +184,7 @@ createApp({
         const j = await res.json();
         if (!res.ok) throw j;
         alert('Usuário criado com sucesso. Faça login.');
-        this.view = 'login';
-        // opcional limpar
+        this.view = 'login'
       } catch(e) {
         alert(e.error || JSON.stringify(e));
       }

@@ -5,16 +5,16 @@ require_once 'cors.php';
 require_once 'db.php';
 require_once 'auth_middleware.php';
 
-$auth = require_auth(); // returns payload with user_id
+$auth = require_auth(); // retorna payload com user_id
 $pdo = getPDO();
 
 $method = $_SERVER['REQUEST_METHOD'];
-// id can come via GET param ?id= or JSON payload for PUT/DELETE
+// id pode vir via parâmetro GET ?id= ou no corpo JSON para PUT/DELETE
 $id = isset($_GET['id']) ? intval($_GET['id']) : null;
 
 switch ($method) {
     case 'GET':
-        // if id specified, return specific task; else return user's tasks
+        // se id especificado, retorna tarefa específica; senão retorna todas as tarefas do usuário
         if ($id) {
             $stmt = $pdo->prepare("SELECT * FROM tasks WHERE id = ? AND user_id = ?");
             $stmt->execute([$id, $auth['user_id']]);
@@ -29,12 +29,12 @@ switch ($method) {
         }
         break;
     case 'POST':
-        // create new task
+        // cria nova tarefa
         $data = json_decode(file_get_contents('php://input'), true);
         if (!$data || empty($data['title'])) { http_response_code(400); echo json_encode(['error'=>'title required']); exit; }
         $title = $data['title'];
         $description = $data['description'] ?? '';
-        $due_date = $data['due_date'] ?? null; // expect 'YYYY-MM-DD HH:MM:SS' or null
+        $due_date = $data['due_date'] ?? null; // espera formato 'YYYY-MM-DD HH:MM:SS' ou null
         $stmt = $pdo->prepare("INSERT INTO tasks (user_id, title, description, due_date) VALUES (?, ?, ?, ?)");
         $stmt->execute([$auth['user_id'], $title, $description, $due_date]);
         $id = $pdo->lastInsertId();
@@ -42,18 +42,18 @@ switch ($method) {
         echo json_encode(['message'=>'created','id'=>$id]);
         break;
     case 'PUT':
-        // update task (mark as done, edit title, etc)
+        // atualiza tarefa (marcar como concluída, editar título, etc)
         $data = json_decode(file_get_contents('php://input'), true);
         if (!$data || empty($data['id'])) { http_response_code(400); echo json_encode(['error'=>'id required']); exit; }
         $tid = intval($data['id']);
-        // verify ownership
+        // verifica propriedade da tarefa
         $stmt = $pdo->prepare("SELECT * FROM tasks WHERE id=? AND user_id=?");
         $stmt->execute([$tid, $auth['user_id']]);
         if (!$stmt->fetch()) { http_response_code(404); echo json_encode(['error'=>'Not found']); exit; }
         $title = $data['title'] ?? null;
         $description = $data['description'] ?? null;
         $due_date = $data['due_date'] ?? null;
-        $status = $data['status'] ?? null; // 'open' or 'done'
+        $status = $data['status'] ?? null; // 'open' ou 'done'
         $updates = [];
         $params = [];
         if ($title !== null) { $updates[] = "title = ?"; $params[] = $title; }
@@ -68,7 +68,7 @@ switch ($method) {
         echo json_encode(['message'=>'updated']);
         break;
     case 'DELETE':
-        // delete task: id via ?id=
+        // deleta tarefa: id via ?id=
         if (!$id) { http_response_code(400); echo json_encode(['error'=>'id required']); exit; }
         $stmt = $pdo->prepare("DELETE FROM tasks WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $auth['user_id']]);
